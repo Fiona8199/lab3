@@ -4,6 +4,15 @@ import socket
 SERVER_ADDRESS = 'localhost'
 SERVER_PORT = 51234
 
+def encode_request(command, key, value=None):
+    if command == 'R':
+        message = f"{len(f'R {key}')+3:03} R {key}"
+    elif command == 'G':
+        message = f"{len(f'G {key}')+3:03} G {key}"
+    elif command == 'P':
+        message = f"{len(f'P {key} {value}')+3:03} P {key} {value}"
+    return message
+
 def send_request(request):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_ADDRESS, SERVER_PORT))
@@ -17,7 +26,12 @@ def process_request_file(file_path):
         for line in file:
             line = line.strip()
             if line:
-                response = send_request(line)
+                parts = line.split()
+                command = parts[0]
+                key = parts[1]
+                value = ' '.join(parts[2:]) if len(parts) > 2 else None
+                request = encode_request(command, key, value)
+                response = send_request(request)
                 print(f"{line}: {response}")
 
 if __name__ == "__main__":
