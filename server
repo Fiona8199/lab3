@@ -8,33 +8,45 @@ SERVER_PORT = 51234
 # Tuple space
 tuple_space = {}
 
+def encode_message(command, key, value=None, error=None):
+    if error:
+        message = f"{len(error):03} ERR {error}"
+    elif command == 'R':
+        message = f"{len(f'OK ({key}, {value}) read'):03} OK ({key}, {value}) read"
+    elif command == 'G':
+        message = f"{len(f'OK ({key}, {value}) removed'):03} OK ({key}, {value}) removed"
+    elif command == 'P':
+        message = f"{len(f'OK ({key}, {value}) added'):03} OK ({key}, {value}) added"
+    return message
+
 def handle_client(client_socket):
     while True:
         request = client_socket.recv(1024).decode()
         if not request:
             break
-        # Simple request parsing
+        # Parse request
         parts = request.split()
+        message_length = int(parts[0])
         command = parts[1]
         key = parts[2]
         if command == 'R':
             if key in tuple_space:
-                response = f"OK ({key}, {tuple_space[key]}) read"
+                response = encode_message('R', key, tuple_space[key])
             else:
-                response = f"ERR {key} does not exist"
+                response = encode_message(None, None, None, f"{key} does not exist")
         elif command == 'G':
             if key in tuple_space:
-                response = f"OK ({key}, {tuple_space[key]}) removed"
+                response = encode_message('G', key, tuple_space[key])
                 del tuple_space[key]
             else:
-                response = f"ERR {key} does not exist"
+                response = encode_message(None, None, None, f"{key} does not exist")
         elif command == 'P':
             value = ' '.join(parts[3:])
             if key not in tuple_space:
                 tuple_space[key] = value
-                response = f"OK ({key}, {value}) added"
+                response = encode_message('P', key, value)
             else:
-                response = f"ERR {key} already exists"
+                response = encode_message(None, None, None, f"{key} already exists")
         client_socket.send(response.encode())
     client_socket.close()
 
