@@ -9,6 +9,9 @@ SERVER_PORT = 51234
 tuple_space = {}
 
 def encode_message(command, key, value=None, error=None):
+    """
+    Encode the response message according to the protocol.
+    """
     if error:
         message = f"{len(error):03} ERR {error}"
     elif command == 'R':
@@ -20,6 +23,9 @@ def encode_message(command, key, value=None, error=None):
     return message
 
 def handle_client(client_socket):
+    """
+    Handle requests from a single client.
+    """
     while True:
         request = client_socket.recv(1024).decode()
         if not request:
@@ -29,7 +35,11 @@ def handle_client(client_socket):
         message_length = int(parts[0])
         command = parts[1]
         key = parts[2]
-        if command == 'R':
+        
+        # Check request length
+        if message_length > 999 or message_length < 7:
+            response = encode_message(None, None, None, "Invalid request length")
+        elif command == 'R':
             if key in tuple_space:
                 response = encode_message('R', key, tuple_space[key])
             else:
@@ -51,6 +61,9 @@ def handle_client(client_socket):
     client_socket.close()
 
 def start_server():
+    """
+    Start the server to listen for incoming client connections.
+    """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((SERVER_ADDRESS, SERVER_PORT))
     server_socket.listen(5)
