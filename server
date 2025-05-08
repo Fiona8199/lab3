@@ -1,0 +1,52 @@
+import socket
+import threading
+
+# Server address and port
+SERVER_ADDRESS = 'localhost'
+SERVER_PORT = 51234
+
+# Tuple space
+tuple_space = {}
+
+def handle_client(client_socket):
+    while True:
+        request = client_socket.recv(1024).decode()
+        if not request:
+            break
+        # Simple request parsing
+        parts = request.split()
+        command = parts[1]
+        key = parts[2]
+        if command == 'R':
+            if key in tuple_space:
+                response = f"OK ({key}, {tuple_space[key]}) read"
+            else:
+                response = f"ERR {key} does not exist"
+        elif command == 'G':
+            if key in tuple_space:
+                response = f"OK ({key}, {tuple_space[key]}) removed"
+                del tuple_space[key]
+            else:
+                response = f"ERR {key} does not exist"
+        elif command == 'P':
+            value = ' '.join(parts[3:])
+            if key not in tuple_space:
+                tuple_space[key] = value
+                response = f"OK ({key}, {value}) added"
+            else:
+                response = f"ERR {key} already exists"
+        client_socket.send(response.encode())
+    client_socket.close()
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((SERVER_ADDRESS, SERVER_PORT))
+    server_socket.listen(5)
+    print("Server started, waiting for clients...")
+    while True:
+        client_socket, addr = server_socket.accept()
+        client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+        client_thread.start()
+
+if __name__ == "__main__":
+    start_server()
