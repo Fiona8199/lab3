@@ -5,6 +5,9 @@ SERVER_ADDRESS = 'localhost'
 SERVER_PORT = 51234
 
 def encode_request(command, key, value=None):
+    """
+    Encode the request message according to the protocol.
+    """
     if command == 'R':
         message = f"{len(f'R {key}')+3:03} R {key}"
     elif command == 'G':
@@ -14,6 +17,9 @@ def encode_request(command, key, value=None):
     return message
 
 def send_request(request):
+    """
+    Send the request to the server and receive the response.
+    """
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_ADDRESS, SERVER_PORT))
     client_socket.send(request.encode())
@@ -22,6 +28,9 @@ def send_request(request):
     return response
 
 def process_request_file(file_path):
+    """
+    Process the request file and send each request to the server.
+    """
     with open(file_path, 'r') as file:
         for line in file:
             line = line.strip()
