@@ -1,0 +1,29 @@
+import socket
+
+# Server address and port
+SERVER_ADDRESS = 'localhost'
+SERVER_PORT = 51234
+
+def send_request(request):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((SERVER_ADDRESS, SERVER_PORT))
+    client_socket.send(request.encode())
+    response = client_socket.recv(1024).decode()
+    client_socket.close()
+    return response
+
+def process_request_file(file_path):
+    with open(file_path, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if line:
+                response = send_request(line)
+                print(f"{line}: {response}")
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print("Usage: python client.py <request_file>")
+        sys.exit(1)
+    request_file = sys.argv[1]
+    process_request_file(request_file)
