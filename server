@@ -1,5 +1,6 @@
 import socket
 import threading
+from datetime import datetime
 
 # Server address and port
 SERVER_ADDRESS = 'localhost'
@@ -7,6 +8,19 @@ SERVER_PORT = 51234
 
 # Tuple space
 tuple_space = {}
+
+# Server statistics
+stats = {
+    'total_clients': 0,
+    'total_operations': 0,
+    'total_reads': 0,
+    'total_gets': 0,
+    'total_puts': 0,
+    'total_errors': 0
+}
+
+# Lock for thread-safe operations on shared resources
+lock = threading.Lock()
 
 def encode_message(command, key, value=None, error=None):
     """
@@ -26,6 +40,10 @@ def handle_client(client_socket):
     """
     Handle requests from a single client.
     """
+    global stats
+    with lock:
+        stats['total_clients'] += 1
+
     while True:
         request = client_socket.recv(1024).decode()
         if not request:
@@ -39,26 +57,78 @@ def handle_client(client_socket):
         # Check request length
         if message_length > 999 or message_length < 7:
             response = encode_message(None, None, None, "Invalid request length")
+            with lock:
+                stats['total_errors'] += 1
         elif command == 'R':
+            with lock:
+                stats['total_operations'] += 1
+                stats['total_reads'] += 1
             if key in tuple_space:
                 response = encode_message('R', key, tuple_space[key])
             else:
                 response = encode_message(None, None, None, f"{key} does not exist")
+                with lock:
+                    stats['total_errors'] += 1
         elif command == 'G':
+            with lock:
+                stats['total_operations'] += 1
+                stats['total_gets'] += 1
             if key in tuple_space:
                 response = encode_message('G', key, tuple_space[key])
-                del tuple_space[key]
+                with lock:
+                    del tuple_space[key]
             else:
                 response = encode_message(None, None, None, f"{key} does not exist")
+                with lock:
+                    stats['total_errors'] += 1
         elif command == 'P':
             value = ' '.join(parts[3:])
+            with lock:
+                stats['total_operations'] += 1
+                stats['total_puts'] += 1
             if key not in tuple_space:
-                tuple_space[key] = value
+                with lock:
+                    tuple_space[key] = value
                 response = encode_message('P', key, value)
             else:
                 response = encode_message(None, None, None, f"{key} already exists")
+                with lock:
+                    stats['total_errors'] += 1
         client_socket.send(response.encode())
     client_socket.close()
+
+def print_statistics():
+    """
+    Print server statistics every 10 seconds.
+    """
+    while True:
+        with lock:
+            total_clients = stats['total_clients']
+            total_operations = stats['total_operations']
+            total_reads = stats['total_reads']
+            total_gets = stats['total_gets']
+            total_puts = stats['total_puts']
+            total_errors = stats['total_errors']
+            tuple_count = len(tuple_space)
+            if tuple_count > 0:
+                avg_tuple_size = sum(len(k) + len(v) for k, v in tuple_space.items()) / tuple_count
+                avg_key_size = sum(len(k) for k in tuple_space.keys()) / tuple_count
+                avg_value_size = sum(len(v) for v in tuple_space.values()) / tuple_count
+            else:
+                avg_tuple_size = avg_key_size = avg_value_size = 0
+        print(f"Statistics at {datetime.now()}:")
+        print(f"Total clients: {total_clients}")
+        print(f"Total operations: {total_operations}")
+        print(f"Total reads: {total_reads}")
+        print(f"Total gets: {total_gets}")
+        print(f"Total puts: {total_puts}")
+        print(f"Total errors: {total_errors}")
+        print(f"Current tuples: {tuple_count}")
+        print(f"Average tuple size: {avg_tuple_size:.2f}")
+        print(f"Average key size: {avg_key_size:.2f}")
+        print(f"Average value size: {avg_value_size:.2f}")
+        print("-" * 40)
+        time.sleep(10)
 
 def start_server():
     """
@@ -68,10 +138,13 @@ def start_server():
     server_socket.bind((SERVER_ADDRESS, SERVER_PORT))
     server_socket.listen(5)
     print("Server started, waiting for clients...")
+    stats_thread = threading.Thread(target=print_statistics)
+    stats_thread.start()
     while True:
         client_socket, addr = server_socket.accept()
         client_thread = threading.Thread(target=handle_client, args=(client_socket,))
         client_thread.start()
 
 if __name__ == "__main__":
+    import time
     start_server()
