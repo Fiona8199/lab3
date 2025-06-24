@@ -69,4 +69,8 @@ stats = {
         client_sock, addr = server.accept()
         print(f"Accepted connection from {addr}")
         client_handler = threading.Thread(target=handle_client, args=(client_sock,))
-        client_handler.start()                
+        client_handler.start()                        time.sleep(10)
+        print(f"Tuples: {stats['tuples_count']}, Avg size: {stats['avg_tuple_size']}, Avg key size: {stats['avg_key_size']}, Avg value size: {stats['avg_value_size']}, Clients: {stats['total_clients']}, Operations: {stats['total_operations']}, Reads: {stats['total_reads']}, Gets: {stats['total_gets']}, Puts: {stats['total_puts']}, Errors: {stats['errors']}")
+
+if __name__ == "__main__":
+    start_server(51234)                        
