@@ -48,4 +48,14 @@ stats = {
             client_socket.sendall(f"{len(f'OK (k, v) removed {value}')} OK (k, v) removed {value}".encode())
         else:
             stats['errors'] += 1
-            client_socket.sendall(f"{len('ERR k does not exist')} ERR k does not exist".encode())
+            client_socket.sendall(f"{len('ERR k does not exist')} ERR k does not exist".encode())def handle_client(client_socket):
+    global stats
+    while True:
+        request = client_socket.recv(1024).decode()
+        if not request:
+            break
+        print(f"Received request: {request}")
+        response = process_request(client_socket, request)
+        client_socket.sendall(response.encode())
+    client_socket.close()
+    stats['total_clients'] += 1            
