@@ -58,4 +58,15 @@ stats = {
         response = process_request(client_socket, request)
         client_socket.sendall(response.encode())
     client_socket.close()
-    stats['total_clients'] += 1            
+    stats['total_clients'] += 1            def start_server(port):
+    global stats
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('localhost', port))
+    server.listen()
+    print(f"Server listening on port {port}")
+
+    while True:
+        client_sock, addr = server.accept()
+        print(f"Accepted connection from {addr}")
+        client_handler = threading.Thread(target=handle_client, args=(client_sock,))
+        client_handler.start()                
